@@ -1,0 +1,72 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- 1. The Board Model (Top-Level Container) ---
+model Board {
+  id        String   @id @default(uuid())
+  title     String
+  ownerId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relation: A Board has many Lists
+  lists     List[]   // <--- REMOVED @orderBy(order: asc)
+}
+
+// --- 2. The List Model (Column) ---
+model List {
+  id        String   @id @default(uuid())
+  title     String
+  order     Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relation to Board (Parent)
+  boardId   String
+  board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  
+  // Relation: A List has many Cards
+  cards     Card[]   // <--- REMOVED @orderBy(order: asc)
+
+  // Use this block to define the default order and ensure ordering uniqueness within the board
+  @@unique([boardId, order])
+  @@index([boardId, order]) // <--- Optimization for ordering queries
+}
+
+// --- 3. The Card Model (Task) ---
+model Card {
+  id          String    @id @default(uuid())
+  title       String
+  description String?   @db.Text
+  order       Float
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  // Relation to List (Parent)
+  listId      String
+  list        List      @relation(fields: [listId], references: [id], onDelete: Cascade)
+  
+  // Use this block to define the default order and ensure ordering uniqueness within the list
+  @@unique([listId, order])
+  @@index([listId, order]) // <--- Optimization for ordering queries
+}
+
+// Optional: Basic User Model for Authentication (Needs NextAuth.js setup later)
+model User {
+  id            String    @id @default(uuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  // Add relations for future features if needed, e.g., created boards, assigned cards, etc.
+}
